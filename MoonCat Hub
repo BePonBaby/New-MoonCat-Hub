@@ -19,8 +19,8 @@ ScreenGui.ResetOnSpawn = false
 
 -- Tạo Frame chính (trong suốt, viền LED neon)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 600)
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -300)
+MainFrame.Size = UDim2.new(0, 300, 0, 700)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -350)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BackgroundTransparency = 0.5
 MainFrame.BorderSizePixel = 0
@@ -82,24 +82,10 @@ local toggles = {
     AutoYama = false,
     AutoSharkAnchor = false,
     AutoGuitar = false,
-    FlyHack = false,
-    NoClip = false,
-    AutoMastery = false,
-    AutoStats = false,
-    BossFarm = false,
-    AutoChest = false,
-    AutoV4Race = false,
+    AutoDragonBelt = false, -- Thêm biến cho Auto Dragon Belt
     ESP = false,
-    BringMob = false,
-    BountyHunt = false,
-    DarkMode = true,
-    AntiBan = false,
 }
 local attackSpeed = 0.5
-local flySpeed = 50
-local walkSpeed = 16
-local jumpPower = 50
-local statPoint = "Melee"
 local espInstances = {}
 local currentIslandIndex = 1
 
@@ -126,18 +112,6 @@ end
 local function isFullMoon()
     local timeOfDay = Lighting.ClockTime
     return timeOfDay >= 18 and timeOfDay <= 20 and Lighting.Brightness >= 0.5
-end
-
--- Hàm lấy race hiện tại
-local function getPlayerRace()
-    local race = ReplicatedStorage.Remotes.CommF_:InvokeServer("Wenlocktoad", "1")
-    return race or "Human"
-end
-
--- Hàm kiểm tra điểm Stats
-local function getStatPoints()
-    local points = ReplicatedStorage.Remotes.CommF_:InvokeServer("GetStats")
-    return points or 0
 end
 
 -- Hàm dọn dẹp ESP
@@ -489,8 +463,38 @@ createButton("AutoGuitar", UDim2.new(0.05, 0, 0, 650), "Auto Guitar: OFF", funct
     end
 end)
 
+createButton("AutoDragonBelt", UDim2.new(0.05, 0, 0, 700), "Auto Dragon Belt: OFF", function()
+    toggles.AutoDragonBelt = not toggles.AutoDragonBelt
+    MainFrame.AutoDragonBelt.Text = "Auto Dragon Belt: " .. (toggles.AutoDragonBelt and "ON" or "OFF")
+    if toggles.AutoDragonBelt then
+        spawn(function()
+            while toggles.AutoDragonBelt and LocalPlayer.Character do
+                -- Dịch chuyển đến Hydra Island để farm Dragon Scales
+                teleportTo(CFrame.new(5750, 610, -280))
+                local scaleCount = 0
+                while scaleCount < 10 and toggles.AutoDragonBelt do
+                    if next(Workspace.Enemies:GetChildren()) then
+                        for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+                            if (enemy.Name == "Dragon Crew Warrior" or enemy.Name == "Dragon Crew Archer") and enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                                teleportTo(enemy.HumanoidRootPart.CFrame)
+                                wait(attackSpeed)
+                                scaleCount = scaleCount + 1 -- Giả định mỗi lần giết được 1 Dragon Scale
+                            end
+                        end
+                    end
+                    wait(1)
+                end
+                -- Dịch chuyển đến Tiki Outpost để mua Dragon Belt
+                teleportTo(CFrame.new(-16250, 100, 1000))
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyItem", "Dragon Belt")
+                wait(5)
+            end
+        end)
+    end
+end)
+
 -- 7️⃣ ESP
-createButton("ESP", UDim2.new(0.05, 0, 0, 700), "ESP: OFF", function()
+createButton("ESP", UDim2.new(0.05, 0, 0, 750), "ESP: OFF", function()
     toggles.ESP = not toggles.ESP
     MainFrame.ESP.Text = "ESP: " .. (toggles.ESP and "ON" or "OFF")
     if toggles.ESP then
@@ -518,9 +522,9 @@ createButton("ESP", UDim2.new(0.05, 0, 0, 700), "ESP: OFF", function()
 end)
 
 -- 8️⃣ Nút đóng giao diện
-createButton("Close", UDim2.new(0.05, 0, 0, 750), "Close", function()
+createButton("Close", UDim2.new(0.05, 0, 0, 800), "Close", function()
     ScreenGui:Destroy()
     Blur:Destroy()
 end)
 
-print("MoonCat Hub (Custom UI - BlurEffect, LED Neon) đã chạy!")
+print("MoonCat Hub đã chạy!")
