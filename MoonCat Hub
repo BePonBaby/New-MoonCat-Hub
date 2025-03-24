@@ -1,31 +1,47 @@
--- MoonCat Hub (Custom UI - Trong suốt, Ngầu, Xịn, Không BlurEffect)
+-- MoonCat Hub (Custom UI - Trong suốt, Ngầu, Xịn, Có BlurEffect, Viền LED Neon)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Lighting = game:GetService("Lighting")
+local SoundService = game:GetService("SoundService")
+
+-- Tạo BlurEffect
+local Blur = Instance.new("BlurEffect")
+Blur.Size = 10
+Blur.Parent = Lighting
 
 -- Tạo ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = " MoonCatHub "
+ScreenGui.Name = "MoonCatHub"
 ScreenGui.Parent = LocalPlayer.PlayerGui
 ScreenGui.ResetOnSpawn = false
 
--- Tạo Frame chính (trong suốt, viền neon)
+-- Tạo Frame chính (trong suốt, viền LED neon)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 300, 0, 550) -- Tăng chiều cao để chứa thêm nút Auto Guitar
-MainFrame.Position = UDim2.new(0.5, -150, 0.5, -275)
+MainFrame.Size = UDim2.new(0, 300, 0, 600)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -300)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 MainFrame.BackgroundTransparency = 0.5
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
--- Tạo viền neon
+-- Tạo viền LED neon
 local UIBorder = Instance.new("UIStroke")
 UIBorder.Color = Color3.fromRGB(0, 255, 255)
-UIBorder.Thickness = 2
+UIBorder.Thickness = 3
 UIBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 UIBorder.Parent = MainFrame
+
+-- Tạo hiệu ứng gradient cho viền LED neon
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 255, 255)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 0, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 255, 255))
+})
+UIGradient.Rotation = 45
+UIGradient.Parent = UIBorder
 
 -- Tạo góc bo tròn
 local UICorner = Instance.new("UICorner")
@@ -42,23 +58,86 @@ Title.TextScaled = true
 Title.Font = Enum.Font.SourceSansBold
 Title.Parent = MainFrame
 
+-- Tạo âm thanh khi nhấn nút
+local clickSound = Instance.new("Sound")
+clickSound.SoundId = "rbxassetid://182765513"
+clickSound.Volume = 0.5
+clickSound.Parent = SoundService
+
+-- Hàm phát âm thanh
+local function playClickSound()
+    clickSound:Play()
+end
+
 -- Biến trạng thái
 local toggles = {
     AutoFarmLevel = false,
-    ESP = false,
+    AutoQuest = false,
+    AutoRaid = false,
+    AutoSeaEvent = false,
+    AutoFruitSniper = false,
+    FastAttack = false,
+    Aimbot = false,
     AutoTushita = false,
     AutoYama = false,
     AutoSharkAnchor = false,
     AutoGuitar = false,
+    FlyHack = false,
+    NoClip = false,
+    AutoMastery = false,
+    AutoStats = false,
+    BossFarm = false,
+    AutoChest = false,
+    AutoV4Race = false,
+    ESP = false,
+    BringMob = false,
+    BountyHunt = false,
+    DarkMode = true,
+    AntiBan = false,
 }
 local attackSpeed = 0.5
+local flySpeed = 50
+local walkSpeed = 16
+local jumpPower = 50
+local statPoint = "Melee"
 local espInstances = {}
+local currentIslandIndex = 1
+
+-- Danh sách đảo
+local islands = {
+    "Starter Pirate Island", "Starter Marine Island", "Jungle", "Pirate Village", "Desert",
+    "Middle Island", "Frozen Village", "Marine Fortress", "Skylands", "Prison",
+    "Colosseum", "Magma Village", "Underwater City", "Fountain City",
+    "Kingdom of Rose", "Usoap’s Island", "Graveyard Island", "Dark Arena", "Snow Mountain",
+    "Hot and Cold", "Cursed Ship", "Ice Castle", "Forgotten Island",
+    "Port Town", "Hydra Island", "Great Tree", "Floating Turtle", "Castle on the Sea",
+    "Haunted Castle", "Sea of Treats", "Tiki Outpost", "Heaven Dimension", "Hell Dimension",
+    "Frozen Dimension", "Treasure Island", "Mirage Island"
+}
 
 -- Hàm dịch chuyển
 local function teleportTo(pos)
     if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
         LocalPlayer.Character.HumanoidRootPart.CFrame = pos
     end
+end
+
+-- Hàm kiểm tra Full Moon
+local function isFullMoon()
+    local timeOfDay = Lighting.ClockTime
+    return timeOfDay >= 18 and timeOfDay <= 20 and Lighting.Brightness >= 0.5
+end
+
+-- Hàm lấy race hiện tại
+local function getPlayerRace()
+    local race = ReplicatedStorage.Remotes.CommF_:InvokeServer("Wenlocktoad", "1")
+    return race or "Human"
+end
+
+-- Hàm kiểm tra điểm Stats
+local function getStatPoints()
+    local points = ReplicatedStorage.Remotes.CommF_:InvokeServer("GetStats")
+    return points or 0
 end
 
 -- Hàm dọn dẹp ESP
@@ -71,36 +150,40 @@ local function clearESP()
     espInstances = {}
 end
 
--- Hàm kiểm tra Full Moon
-local function isFullMoon()
-    local timeOfDay = Lighting.ClockTime
-    return timeOfDay >= 18 and timeOfDay <= 20 and Lighting.Brightness >= 0.5
+-- Hàm tạo nút
+local function createButton(name, position, text, callback)
+    local button = Instance.new("TextButton")
+    button.Size = UDim2.new(0.9, 0, 0, 40)
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    button.BackgroundTransparency = 0.3
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextScaled = true
+    button.Font = Enum.Font.SourceSans
+    button.Parent = MainFrame
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 5)
+    corner.Parent = button
+
+    local border = Instance.new("UIStroke")
+    border.Color = Color3.fromRGB(0, 255, 255)
+    border.Thickness = 1
+    border.Parent = button
+
+    button.MouseButton1Click:Connect(function()
+        playClickSound()
+        callback()
+    end)
+
+    return button
 end
 
--- Nút Auto Farm
-local AutoFarmButton = Instance.new("TextButton")
-AutoFarmButton.Size = UDim2.new(0.9, 0, 0, 40)
-AutoFarmButton.Position = UDim2.new(0.05, 0, 0, 50)
-AutoFarmButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-AutoFarmButton.BackgroundTransparency = 0.3
-AutoFarmButton.Text = "Auto Farm: OFF"
-AutoFarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoFarmButton.TextScaled = true
-AutoFarmButton.Font = Enum.Font.SourceSans
-AutoFarmButton.Parent = MainFrame
-
-local AutoFarmCorner = Instance.new("UICorner")
-AutoFarmCorner.CornerRadius = UDim.new(0, 5)
-AutoFarmCorner.Parent = AutoFarmButton
-
-local AutoFarmBorder = Instance.new("UIStroke")
-AutoFarmBorder.Color = Color3.fromRGB(0, 255, 255)
-AutoFarmBorder.Thickness = 1
-AutoFarmBorder.Parent = AutoFarmButton
-
-AutoFarmButton.MouseButton1Click:Connect(function()
+-- 1️⃣ Auto Farm & Quest
+createButton("AutoFarmLevel", UDim2.new(0.05, 0, 0, 50), "Auto Farm: OFF", function()
     toggles.AutoFarmLevel = not toggles.AutoFarmLevel
-    AutoFarmButton.Text = "Auto Farm: " .. (toggles.AutoFarmLevel and "ON" or "OFF")
+    MainFrame.AutoFarmLevel.Text = "Auto Farm: " .. (toggles.AutoFarmLevel and "ON" or "OFF")
     if toggles.AutoFarmLevel then
         spawn(function()
             while toggles.AutoFarmLevel and LocalPlayer.Character do
@@ -112,7 +195,7 @@ AutoFarmButton.MouseButton1Click:Connect(function()
                         end
                     end
                 else
-                    print("Không tìm thấy quái!")
+                    print("Không tìm thấy quái để farm!")
                     wait(2)
                 end
                 wait(1)
@@ -121,39 +204,111 @@ AutoFarmButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Dropdown Teleport (Danh sách đảo)
-local TeleportButton = Instance.new("TextButton")
-TeleportButton.Size = UDim2.new(0.9, 0, 0, 40)
-TeleportButton.Position = UDim2.new(0.05, 0, 0, 100)
-TeleportButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TeleportButton.BackgroundTransparency = 0.3
-TeleportButton.Text = "Teleport: Starter Pirate Island"
-TeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeleportButton.TextScaled = true
-TeleportButton.Font = Enum.Font.SourceSans
-TeleportButton.Parent = MainFrame
+createButton("AutoQuest", UDim2.new(0.05, 0, 0, 100), "Auto Quest: OFF", function()
+    toggles.AutoQuest = not toggles.AutoQuest
+    MainFrame.AutoQuest.Text = "Auto Quest: " .. (toggles.AutoQuest and "ON" or "OFF")
+    if toggles.AutoQuest then
+        spawn(function()
+            while toggles.AutoQuest and LocalPlayer.Character do
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", "BartiloQuest1", 1)
+                if next(Workspace.Enemies:GetChildren()) then
+                    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+                        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                            teleportTo(enemy.HumanoidRootPart.CFrame)
+                            wait(attackSpeed)
+                        end
+                    end
+                end
+                wait(2)
+            end
+        end)
+    end
+end)
 
-local TeleportCorner = Instance.new("UICorner")
-TeleportCorner.CornerRadius = UDim.new(0, 5)
-TeleportCorner.Parent = TeleportButton
+-- 2️⃣ Auto Raid & Sea Event
+createButton("AutoRaid", UDim2.new(0.05, 0, 0, 150), "Auto Raid: OFF", function()
+    toggles.AutoRaid = not toggles.AutoRaid
+    MainFrame.AutoRaid.Text = "Auto Raid: " .. (toggles.AutoRaid and "ON" or "OFF")
+    if toggles.AutoRaid then
+        spawn(function()
+            while toggles.AutoRaid and LocalPlayer.Character do
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("Raids", "StartRaid")
+                teleportTo(CFrame.new(0, 1000, 0))
+                wait(5)
+            end
+        end)
+    end
+end)
 
-local TeleportBorder = Instance.new("UIStroke")
-TeleportBorder.Color = Color3.fromRGB(0, 255, 255)
-TeleportBorder.Thickness = 1
-TeleportBorder.Parent = TeleportButton
+createButton("AutoSeaEvent", UDim2.new(0.05, 0, 0, 200), "Auto Sea Event: OFF", function()
+    toggles.AutoSeaEvent = not toggles.AutoSeaEvent
+    MainFrame.AutoSeaEvent.Text = "Auto Sea Event: " .. (toggles.AutoSeaEvent and "ON" or "OFF")
+    if toggles.AutoSeaEvent then
+        spawn(function()
+            while toggles.AutoSeaEvent and LocalPlayer.Character do
+                if next(Workspace.SeaBeasts:GetChildren()) then
+                    for _, seaBeast in pairs(Workspace.SeaBeasts:GetChildren()) do
+                        if seaBeast:FindFirstChild("Humanoid") and seaBeast.Humanoid.Health > 0 then
+                            teleportTo(seaBeast.HumanoidRootPart.CFrame)
+                            wait(attackSpeed)
+                        end
+                    end
+                end
+                wait(2)
+            end
+        end)
+    end
+end)
 
-local islands = {
-    "Starter Pirate Island", "Starter Marine Island", "Jungle", "Pirate Village", "Desert",
-    "Middle Island", "Frozen Village", "Marine Fortress", "Skylands", "Prison",
-    "Colosseum", "Magma Village", "Underwater City", "Fountain City",
-    "Kingdom of Rose", "Usoap’s Island", "Graveyard Island", "Dark Arena", "Snow Mountain",
-    "Hot and Cold", "Cursed Ship", "Ice Castle", "Forgotten Island",
-    "Port Town", "Hydra Island", "Great Tree", "Floating Turtle", "Castle on the Sea",
-    "Haunted Castle", "Sea of Treats", "Tiki Outpost", "Treasure Island", "Mirage Island"
-}
-local currentIslandIndex = 1
+-- 3️⃣ Auto Fruit Sniper
+createButton("AutoFruitSniper", UDim2.new(0.05, 0, 0, 250), "Auto Fruit Sniper: OFF", function()
+    toggles.AutoFruitSniper = not toggles.AutoFruitSniper
+    MainFrame.AutoFruitSniper.Text = "Auto Fruit Sniper: " .. (toggles.AutoFruitSniper and "ON" or "OFF")
+    if toggles.AutoFruitSniper then
+        spawn(function()
+            while toggles.AutoFruitSniper and LocalPlayer.Character do
+                for _, fruit in pairs(Workspace:GetChildren()) do
+                    if fruit:IsA("Tool") and fruit:FindFirstChild("Handle") and fruit.Name:match("Fruit") then
+                        teleportTo(fruit.Handle.CFrame)
+                        wait(0.5)
+                    end
+                end
+                wait(1)
+            end
+        end)
+    end
+end)
 
-TeleportButton.MouseButton1Click:Connect(function()
+-- 4️⃣ Combat
+createButton("FastAttack", UDim2.new(0.05, 0, 0, 300), "Fast Attack: OFF", function()
+    toggles.FastAttack = not toggles.FastAttack
+    MainFrame.FastAttack.Text = "Fast Attack: " .. (toggles.FastAttack and "ON" or "OFF")
+    attackSpeed = toggles.FastAttack and 0.2 or 0.5
+end)
+
+createButton("Aimbot", UDim2.new(0.05, 0, 0, 350), "Aimbot: OFF", function()
+    toggles.Aimbot = not toggles.Aimbot
+    MainFrame.Aimbot.Text = "Aimbot: " .. (toggles.Aimbot and "ON" or "OFF")
+    if toggles.Aimbot then
+        spawn(function()
+            while toggles.Aimbot and LocalPlayer.Character do
+                for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+                    if enemy:FindFirstChild("HumanoidRootPart") then
+                        local distance = (enemy.HumanoidRootPart.Position - LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                        if distance < 50 then
+                            LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(LocalPlayer.Character.HumanoidRootPart.Position, enemy.HumanoidRootPart.Position)
+                        end
+                        wait(0.2)
+                    end
+                end
+                wait(0.5)
+            end
+        end)
+    end
+end)
+
+-- 5️⃣ Teleport
+local TeleportButton = createButton("Teleport", UDim2.new(0.05, 0, 0, 400), "Teleport: Starter Pirate Island", function()
     currentIslandIndex = currentIslandIndex + 1
     if currentIslandIndex > #islands then
         currentIslandIndex = 1
@@ -161,27 +316,7 @@ TeleportButton.MouseButton1Click:Connect(function()
     TeleportButton.Text = "Teleport: " .. islands[currentIslandIndex]
 end)
 
-local TeleportExecute = Instance.new("TextButton")
-TeleportExecute.Size = UDim2.new(0.9, 0, 0, 40)
-TeleportExecute.Position = UDim2.new(0.05, 0, 0, 150)
-TeleportExecute.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
-TeleportExecute.BackgroundTransparency = 0.3
-TeleportExecute.Text = "Execute Teleport"
-TeleportExecute.TextColor3 = Color3.fromRGB(255, 255, 255)
-TeleportExecute.TextScaled = true
-TeleportExecute.Font = Enum.Font.SourceSans
-TeleportExecute.Parent = MainFrame
-
-local TeleportExecuteCorner = Instance.new("UICorner")
-TeleportExecuteCorner.CornerRadius = UDim.new(0, 5)
-TeleportExecuteCorner.Parent = TeleportExecute
-
-local TeleportExecuteBorder = Instance.new("UIStroke")
-TeleportExecuteBorder.Color = Color3.fromRGB(0, 255, 255)
-TeleportExecuteBorder.Thickness = 1
-TeleportExecuteBorder.Parent = TeleportExecute
-
-TeleportExecute.MouseButton1Click:Connect(function()
+local TeleportExecute = createButton("TeleportExecute", UDim2.new(0.05, 0, 0, 450), "Execute Teleport", function()
     local locations = {
         ["Starter Pirate Island"] = CFrame.new(1050, 17, 1350),
         ["Starter Marine Island"] = CFrame.new(-500, 17, 1500),
@@ -214,6 +349,9 @@ TeleportExecute.MouseButton1Click:Connect(function()
         ["Haunted Castle"] = CFrame.new(-9500, 17, 5000),
         ["Sea of Treats"] = CFrame.new(0, 17, -10000),
         ["Tiki Outpost"] = CFrame.new(-16250, 100, 1000),
+        ["Heaven Dimension"] = CFrame.new(0, 1000, 0),
+        ["Hell Dimension"] = CFrame.new(0, -1000, 0),
+        ["Frozen Dimension"] = CFrame.new(5000, 17, 5000),
         ["Treasure Island"] = CFrame.new(-10000, 17, -5000),
         ["Mirage Island"] = CFrame.new(0, 100, 0)
     }
@@ -221,80 +359,10 @@ TeleportExecute.MouseButton1Click:Connect(function()
     print("Đã dịch chuyển đến " .. islands[currentIslandIndex])
 end)
 
--- Nút ESP
-local ESPButton = Instance.new("TextButton")
-ESPButton.Size = UDim2.new(0.9, 0, 0, 40)
-ESPButton.Position = UDim2.new(0.05, 0, 0, 200)
-ESPButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-ESPButton.BackgroundTransparency = 0.3
-ESPButton.Text = "ESP: OFF"
-ESPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-ESPButton.TextScaled = true
-ESPButton.Font = Enum.Font.SourceSans
-ESPButton.Parent = MainFrame
-
-local ESPCorner = Instance.new("UICorner")
-ESPCorner.CornerRadius = UDim.new(0, 5)
-ESPCorner.Parent = ESPButton
-
-local ESPBorder = Instance.new("UIStroke")
-ESPBorder.Color = Color3.fromRGB(0, 255, 255)
-ESPBorder.Thickness = 1
-ESPBorder.Parent = ESPButton
-
-ESPButton.MouseButton1Click:Connect(function()
-    toggles.ESP = not toggles.ESP
-    ESPButton.Text = "ESP: " .. (toggles.ESP and "ON" or "OFF")
-    if toggles.ESP then
-        spawn(function()
-            while toggles.ESP and LocalPlayer.Character do
-                for _, obj in pairs(Workspace:GetChildren()) do
-                    if obj:FindFirstChild("Humanoid") and not obj:FindFirstChild("BillboardGui") then
-                        local esp = Instance.new("BillboardGui", obj)
-                        esp.Size = UDim2.new(0, 100, 0, 50)
-                        esp.StudsOffset = Vector3.new(0, 3, 0)
-                        local text = Instance.new("TextLabel", esp)
-                        text.Size = UDim2.new(1, 0, 1, 0)
-                        text.Text = obj.Name
-                        text.BackgroundTransparency = 1
-                        text.TextColor3 = Color3.fromRGB(255, 0, 0)
-                        table.insert(espInstances, esp)
-                    end
-                end
-                wait(5)
-            end
-        end)
-    else
-        clearESP()
-        print("ESP đã tắt!")
-    end
-end)
-
--- Phần Auto Weapons
--- Nút Auto Tushita
-local TushitaButton = Instance.new("TextButton")
-TushitaButton.Size = UDim2.new(0.9, 0, 0, 40)
-TushitaButton.Position = UDim2.new(0.05, 0, 0, 250)
-TushitaButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-TushitaButton.BackgroundTransparency = 0.3
-TushitaButton.Text = "Auto Tushita: OFF"
-TushitaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-TushitaButton.TextScaled = true
-TushitaButton.Font = Enum.Font.SourceSans
-TushitaButton.Parent = MainFrame
-
-local TushitaCorner = Instance.new("UICorner")
-TushitaCorner.CornerRadius = UDim.new(0, 5)
-TushitaCorner.Parent = TushitaButton
-
-local TushitaBorder = Instance.new("UIStroke")
-TushitaBorder.Color = Color3.fromRGB(0, 255, 255)
-TushitaBorder.Thickness = 1
-TushitaBorder.Parent = TushitaButton
-
-TushitaButton.MouseButton1Click:Connect(function()
+-- 6️⃣ Auto Weapons
+createButton("AutoTushita", UDim2.new(0.05, 0, 0, 500), "Auto Tushita: OFF", function()
     toggles.AutoTushita = not toggles.AutoTushita
-    TushitaButton.Text = "Auto Tushita: " .. (toggles.AutoTushita and "ON" or "OFF")
+    MainFrame.AutoTushita.Text = "Auto Tushita: " .. (toggles.AutoTushita and "ON" or "OFF")
     if toggles.AutoTushita then
         spawn(function()
             while toggles.AutoTushita and LocalPlayer.Character do
@@ -325,30 +393,9 @@ TushitaButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Nút Auto Yama
-local YamaButton = Instance.new("TextButton")
-YamaButton.Size = UDim2.new(0.9, 0, 0, 40)
-YamaButton.Position = UDim2.new(0.05, 0, 0, 300)
-YamaButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-YamaButton.BackgroundTransparency = 0.3
-YamaButton.Text = "Auto Yama: OFF"
-YamaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-YamaButton.TextScaled = true
-YamaButton.Font = Enum.Font.SourceSans
-YamaButton.Parent = MainFrame
-
-local YamaCorner = Instance.new("UICorner")
-YamaCorner.CornerRadius = UDim.new(0, 5)
-YamaCorner.Parent = YamaButton
-
-local YamaBorder = Instance.new("UIStroke")
-YamaBorder.Color = Color3.fromRGB(0, 255, 255)
-YamaBorder.Thickness = 1
-YamaBorder.Parent = YamaButton
-
-YamaButton.MouseButton1Click:Connect(function()
+createButton("AutoYama", UDim2.new(0.05, 0, 0, 550), "Auto Yama: OFF", function()
     toggles.AutoYama = not toggles.AutoYama
-    YamaButton.Text = "Auto Yama: " .. (toggles.AutoYama and "ON" or "OFF")
+    MainFrame.AutoYama.Text = "Auto Yama: " .. (toggles.AutoYama and "ON" or "OFF")
     if toggles.AutoYama then
         spawn(function()
             while toggles.AutoYama and LocalPlayer.Character do
@@ -376,30 +423,9 @@ YamaButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Nút Auto Shark Anchor
-local SharkAnchorButton = Instance.new("TextButton")
-SharkAnchorButton.Size = UDim2.new(0.9, 0, 0, 40)
-SharkAnchorButton.Position = UDim2.new(0.05, 0, 0, 350)
-SharkAnchorButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-SharkAnchorButton.BackgroundTransparency = 0.3
-SharkAnchorButton.Text = "Auto Shark Anchor: OFF"
-SharkAnchorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-SharkAnchorButton.TextScaled = true
-SharkAnchorButton.Font = Enum.Font.SourceSans
-SharkAnchorButton.Parent = MainFrame
-
-local SharkAnchorCorner = Instance.new("UICorner")
-SharkAnchorCorner.CornerRadius = UDim.new(0, 5)
-SharkAnchorCorner.Parent = SharkAnchorButton
-
-local SharkAnchorBorder = Instance.new("UIStroke")
-SharkAnchorBorder.Color = Color3.fromRGB(0, 255, 255)
-SharkAnchorBorder.Thickness = 1
-SharkAnchorBorder.Parent = SharkAnchorButton
-
-SharkAnchorButton.MouseButton1Click:Connect(function()
+createButton("AutoSharkAnchor", UDim2.new(0.05, 0, 0, 600), "Auto Shark Anchor: OFF", function()
     toggles.AutoSharkAnchor = not toggles.AutoSharkAnchor
-    SharkAnchorButton.Text = "Auto Shark Anchor: " .. (toggles.AutoSharkAnchor and "ON" or "OFF")
+    MainFrame.AutoSharkAnchor.Text = "Auto Shark Anchor: " .. (toggles.AutoSharkAnchor and "ON" or "OFF")
     if toggles.AutoSharkAnchor then
         spawn(function()
             while toggles.AutoSharkAnchor and LocalPlayer.Character do
@@ -420,49 +446,23 @@ SharkAnchorButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Nút Auto Guitar
-local GuitarButton = Instance.new("TextButton")
-GuitarButton.Size = UDim2.new(0.9, 0, 0, 40)
-GuitarButton.Position = UDim2.new(0.05, 0, 0, 400)
-GuitarButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-GuitarButton.BackgroundTransparency = 0.3
-GuitarButton.Text = "Auto Guitar: OFF"
-GuitarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-GuitarButton.TextScaled = true
-GuitarButton.Font = Enum.Font.SourceSans
-GuitarButton.Parent = MainFrame
-
-local GuitarCorner = Instance.new("UICorner")
-GuitarCorner.CornerRadius = UDim.new(0, 5)
-GuitarCorner.Parent = GuitarButton
-
-local GuitarBorder = Instance.new("UIStroke")
-GuitarBorder.Color = Color3.fromRGB(0, 255, 255)
-GuitarBorder.Thickness = 1
-GuitarBorder.Parent = GuitarButton
-
-GuitarButton.MouseButton1Click:Connect(function()
+createButton("AutoGuitar", UDim2.new(0.05, 0, 0, 650), "Auto Guitar: OFF", function()
     toggles.AutoGuitar = not toggles.AutoGuitar
-    GuitarButton.Text = "Auto Guitar: " .. (toggles.AutoGuitar and "ON" or "OFF")
+    MainFrame.AutoGuitar.Text = "Auto Guitar: " .. (toggles.AutoGuitar and "ON" or "OFF")
     if toggles.AutoGuitar then
         spawn(function()
             while toggles.AutoGuitar and LocalPlayer.Character do
-                -- Kiểm tra Full Moon và Sea 3
-                if game.PlaceId == 7449423635 and isFullMoon() then -- Sea 3
-                    -- Tìm Mirage Island
+                if game.PlaceId == 7449423635 and isFullMoon() then
                     for _, island in pairs(Workspace:GetChildren()) do
                         if island.Name == "Mirage Island" then
-                            -- Dịch chuyển đến Highest Point
                             if island:FindFirstChild("HighestPoint") then
                                 teleportTo(island.HighestPoint.CFrame)
-                                -- Tương tác với Highest Point (nếu có ClickDetector)
                                 for _, part in pairs(island:GetChildren()) do
                                     if part.Name == "HighestPoint" and part:FindFirstChild("ClickDetector") then
                                         fireclickdetector(part.ClickDetector)
                                     end
                                 end
                             end
-                            -- Tìm và nhặt Blue Gear
                             for _, gear in pairs(island:GetChildren()) do
                                 if gear.Name == "Blue Gear" then
                                     teleportTo(gear.CFrame)
@@ -472,11 +472,8 @@ GuitarButton.MouseButton1Click:Connect(function()
                                     break
                                 end
                             end
-                            -- Dịch chuyển đến Temple of Time
                             teleportTo(CFrame.new(-5075, 315, -3150))
-                            -- Kéo Lever
                             ReplicatedStorage.Remotes.CommF_:InvokeServer("Awakener", "PullLever")
-                            -- Gọi API để lấy Guitar
                             ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyItem", "Electric Guitar")
                             wait(5)
                             break
@@ -492,29 +489,38 @@ GuitarButton.MouseButton1Click:Connect(function()
     end
 end)
 
--- Nút đóng giao diện
-local CloseButton = Instance.new("TextButton")
-CloseButton.Size = UDim2.new(0.9, 0, 0, 40)
-CloseButton.Position = UDim2.new(0.05, 0, 0, 500)
-CloseButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
-CloseButton.BackgroundTransparency = 0.3
-CloseButton.Text = "Close"
-CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseButton.TextScaled = true
-CloseButton.Font = Enum.Font.SourceSans
-CloseButton.Parent = MainFrame
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 5)
-CloseCorner.Parent = CloseButton
-
-local CloseBorder = Instance.new("UIStroke")
-CloseBorder.Color = Color3.fromRGB(255, 0, 0)
-CloseBorder.Thickness = 1
-CloseBorder.Parent = CloseButton
-
-CloseButton.MouseButton1Click:Connect(function()
-    ScreenGui:Destroy()
+-- 7️⃣ ESP
+createButton("ESP", UDim2.new(0.05, 0, 0, 700), "ESP: OFF", function()
+    toggles.ESP = not toggles.ESP
+    MainFrame.ESP.Text = "ESP: " .. (toggles.ESP and "ON" or "OFF")
+    if toggles.ESP then
+        spawn(function()
+            while toggles.ESP and LocalPlayer.Character do
+                for _, obj in pairs(Workspace:GetChildren()) do
+                    if (obj:FindFirstChild("Humanoid") or obj.Name:match("Chest") or obj:IsA("Tool")) and not obj:FindFirstChild("BillboardGui") then
+                        local esp = Instance.new("BillboardGui", obj)
+                        esp.Size = UDim2.new(0, 100, 0, 50)
+                        esp.StudsOffset = Vector3.new(0, 3, 0)
+                        local text = Instance.new("TextLabel", esp)
+                        text.Size = UDim2.new(1, 0, 1, 0)
+                        text.Text = obj.Name
+                        text.BackgroundTransparency = 1
+                        text.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        table.insert(espInstances, esp)
+                    end
+                end
+                wait(5)
+            end
+        end)
+    else
+        clearESP()
+    end
 end)
 
-print("MoonCat Hub đã chạy!")
+-- 8️⃣ Nút đóng giao diện
+createButton("Close", UDim2.new(0.05, 0, 0, 750), "Close", function()
+    ScreenGui:Destroy()
+    Blur:Destroy()
+end)
+
+print("MoonCat Hub (Custom UI - BlurEffect, LED Neon) đã chạy!")
