@@ -1,23 +1,55 @@
--- Tải Linoria UI
-local success, Library = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua"))()
-end)
-
-if not success then
-    warn("Không thể tải Linoria UI: " .. Library)
-    return
-end
-
--- Tạo giao diện
-local Window = Library:CreateWindow("MoonCat Hub - Blox Fruits")
+-- MoonCat Hub (Custom UI - Trong suốt, Ngầu, Xịn, Không BlurEffect)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Lighting = game:GetService("Lighting")
+
+-- Tạo ScreenGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "MoonCatHub"
+ScreenGui.Parent = LocalPlayer.PlayerGui
+ScreenGui.ResetOnSpawn = false
+
+-- Tạo Frame chính (trong suốt, viền neon)
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 550) -- Tăng chiều cao để chứa thêm nút Auto Guitar
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -275)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BackgroundTransparency = 0.5
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+-- Tạo viền neon
+local UIBorder = Instance.new("UIStroke")
+UIBorder.Color = Color3.fromRGB(0, 255, 255)
+UIBorder.Thickness = 2
+UIBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIBorder.Parent = MainFrame
+
+-- Tạo góc bo tròn
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+-- Tiêu đề
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.BackgroundTransparency = 1
+Title.Text = "MoonCat Hub"
+Title.TextColor3 = Color3.fromRGB(0, 255, 255)
+Title.TextScaled = true
+Title.Font = Enum.Font.SourceSansBold
+Title.Parent = MainFrame
 
 -- Biến trạng thái
 local toggles = {
     AutoFarmLevel = false,
     ESP = false,
+    AutoTushita = false,
+    AutoYama = false,
+    AutoSharkAnchor = false,
+    AutoGuitar = false,
 }
 local attackSpeed = 0.5
 local espInstances = {}
@@ -39,86 +71,450 @@ local function clearESP()
     espInstances = {}
 end
 
--- Tab Auto Farm
-local FarmTab = Window:AddTab("Farm")
-local FarmGroup = FarmTab:AddLeftGroupbox("Farm Features")
-FarmGroup:AddToggle("AutoFarmLevel", {
-    Text = "Auto Farm Level",
-    Default = false,
-    Callback = function(state)
-        toggles.AutoFarmLevel = state
-        if state then
-            spawn(function()
-                while toggles.AutoFarmLevel and LocalPlayer.Character do
+-- Hàm kiểm tra Full Moon
+local function isFullMoon()
+    local timeOfDay = Lighting.ClockTime
+    return timeOfDay >= 18 and timeOfDay <= 20 and Lighting.Brightness >= 0.5
+end
+
+-- Nút Auto Farm
+local AutoFarmButton = Instance.new("TextButton")
+AutoFarmButton.Size = UDim2.new(0.9, 0, 0, 40)
+AutoFarmButton.Position = UDim2.new(0.05, 0, 0, 50)
+AutoFarmButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+AutoFarmButton.BackgroundTransparency = 0.3
+AutoFarmButton.Text = "Auto Farm: OFF"
+AutoFarmButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+AutoFarmButton.TextScaled = true
+AutoFarmButton.Font = Enum.Font.SourceSans
+AutoFarmButton.Parent = MainFrame
+
+local AutoFarmCorner = Instance.new("UICorner")
+AutoFarmCorner.CornerRadius = UDim.new(0, 5)
+AutoFarmCorner.Parent = AutoFarmButton
+
+local AutoFarmBorder = Instance.new("UIStroke")
+AutoFarmBorder.Color = Color3.fromRGB(0, 255, 255)
+AutoFarmBorder.Thickness = 1
+AutoFarmBorder.Parent = AutoFarmButton
+
+AutoFarmButton.MouseButton1Click:Connect(function()
+    toggles.AutoFarmLevel = not toggles.AutoFarmLevel
+    AutoFarmButton.Text = "Auto Farm: " .. (toggles.AutoFarmLevel and "ON" or "OFF")
+    if toggles.AutoFarmLevel then
+        spawn(function()
+            while toggles.AutoFarmLevel and LocalPlayer.Character do
+                if next(Workspace.Enemies:GetChildren()) then
+                    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+                        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                            teleportTo(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0))
+                            wait(attackSpeed)
+                        end
+                    end
+                else
+                    print("Không tìm thấy quái!")
+                    wait(2)
+                end
+                wait(1)
+            end
+        end)
+    end
+end)
+
+-- Dropdown Teleport (Danh sách đảo)
+local TeleportButton = Instance.new("TextButton")
+TeleportButton.Size = UDim2.new(0.9, 0, 0, 40)
+TeleportButton.Position = UDim2.new(0.05, 0, 0, 100)
+TeleportButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TeleportButton.BackgroundTransparency = 0.3
+TeleportButton.Text = "Teleport: Starter Pirate Island"
+TeleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportButton.TextScaled = true
+TeleportButton.Font = Enum.Font.SourceSans
+TeleportButton.Parent = MainFrame
+
+local TeleportCorner = Instance.new("UICorner")
+TeleportCorner.CornerRadius = UDim.new(0, 5)
+TeleportCorner.Parent = TeleportButton
+
+local TeleportBorder = Instance.new("UIStroke")
+TeleportBorder.Color = Color3.fromRGB(0, 255, 255)
+TeleportBorder.Thickness = 1
+TeleportBorder.Parent = TeleportButton
+
+local islands = {
+    "Starter Pirate Island", "Starter Marine Island", "Jungle", "Pirate Village", "Desert",
+    "Middle Island", "Frozen Village", "Marine Fortress", "Skylands", "Prison",
+    "Colosseum", "Magma Village", "Underwater City", "Fountain City",
+    "Kingdom of Rose", "Usoap’s Island", "Graveyard Island", "Dark Arena", "Snow Mountain",
+    "Hot and Cold", "Cursed Ship", "Ice Castle", "Forgotten Island",
+    "Port Town", "Hydra Island", "Great Tree", "Floating Turtle", "Castle on the Sea",
+    "Haunted Castle", "Sea of Treats", "Tiki Outpost", "Treasure Island", "Mirage Island"
+}
+local currentIslandIndex = 1
+
+TeleportButton.MouseButton1Click:Connect(function()
+    currentIslandIndex = currentIslandIndex + 1
+    if currentIslandIndex > #islands then
+        currentIslandIndex = 1
+    end
+    TeleportButton.Text = "Teleport: " .. islands[currentIslandIndex]
+end)
+
+local TeleportExecute = Instance.new("TextButton")
+TeleportExecute.Size = UDim2.new(0.9, 0, 0, 40)
+TeleportExecute.Position = UDim2.new(0.05, 0, 0, 150)
+TeleportExecute.BackgroundColor3 = Color3.fromRGB(0, 150, 0)
+TeleportExecute.BackgroundTransparency = 0.3
+TeleportExecute.Text = "Execute Teleport"
+TeleportExecute.TextColor3 = Color3.fromRGB(255, 255, 255)
+TeleportExecute.TextScaled = true
+TeleportExecute.Font = Enum.Font.SourceSans
+TeleportExecute.Parent = MainFrame
+
+local TeleportExecuteCorner = Instance.new("UICorner")
+TeleportExecuteCorner.CornerRadius = UDim.new(0, 5)
+TeleportExecuteCorner.Parent = TeleportExecute
+
+local TeleportExecuteBorder = Instance.new("UIStroke")
+TeleportExecuteBorder.Color = Color3.fromRGB(0, 255, 255)
+TeleportExecuteBorder.Thickness = 1
+TeleportExecuteBorder.Parent = TeleportExecute
+
+TeleportExecute.MouseButton1Click:Connect(function()
+    local locations = {
+        ["Starter Pirate Island"] = CFrame.new(1050, 17, 1350),
+        ["Starter Marine Island"] = CFrame.new(-500, 17, 1500),
+        ["Jungle"] = CFrame.new(1500, 17, -1500),
+        ["Pirate Village"] = CFrame.new(100, 17, -5000),
+        ["Desert"] = CFrame.new(1000, 17, 4500),
+        ["Middle Island"] = CFrame.new(0, 17, 0),
+        ["Frozen Village"] = CFrame.new(1200, 17, -1100),
+        ["Marine Fortress"] = CFrame.new(-5000, 17, 5000),
+        ["Skylands"] = CFrame.new(150, 500, 150),
+        ["Prison"] = CFrame.new(5000, 17, 1000),
+        ["Colosseum"] = CFrame.new(-1500, 17, 3000),
+        ["Magma Village"] = CFrame.new(-5000, 17, -2000),
+        ["Underwater City"] = CFrame.new(4000, -200, 4000),
+        ["Fountain City"] = CFrame.new(5000, 17, -5000),
+        ["Kingdom of Rose"] = CFrame.new(-2000, 17, -2000),
+        ["Usoap’s Island"] = CFrame.new(-3000, 17, 1000),
+        ["Graveyard Island"] = CFrame.new(500, 17, 3000),
+        ["Dark Arena"] = CFrame.new(5000, 17, 5000),
+        ["Snow Mountain"] = CFrame.new(1000, 500, -3000),
+        ["Hot and Cold"] = CFrame.new(-5000, 17, 3000),
+        ["Cursed Ship"] = CFrame.new(0, 500, 5000),
+        ["Ice Castle"] = CFrame.new(5000, 17, -3000),
+        ["Forgotten Island"] = CFrame.new(-3000, 17, -5000),
+        ["Port Town"] = CFrame.new(-300, 17, -1000),
+        ["Hydra Island"] = CFrame.new(5750, 610, -280),
+        ["Great Tree"] = CFrame.new(2000, 17, -5000),
+        ["Floating Turtle"] = CFrame.new(-12550, 332, -7870),
+        ["Castle on the Sea"] = CFrame.new(-5000, 17, 1000),
+        ["Haunted Castle"] = CFrame.new(-9500, 17, 5000),
+        ["Sea of Treats"] = CFrame.new(0, 17, -10000),
+        ["Tiki Outpost"] = CFrame.new(-16250, 100, 1000),
+        ["Treasure Island"] = CFrame.new(-10000, 17, -5000),
+        ["Mirage Island"] = CFrame.new(0, 100, 0)
+    }
+    teleportTo(locations[islands[currentIslandIndex]])
+    print("Đã dịch chuyển đến " .. islands[currentIslandIndex])
+end)
+
+-- Nút ESP
+local ESPButton = Instance.new("TextButton")
+ESPButton.Size = UDim2.new(0.9, 0, 0, 40)
+ESPButton.Position = UDim2.new(0.05, 0, 0, 200)
+ESPButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+ESPButton.BackgroundTransparency = 0.3
+ESPButton.Text = "ESP: OFF"
+ESPButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ESPButton.TextScaled = true
+ESPButton.Font = Enum.Font.SourceSans
+ESPButton.Parent = MainFrame
+
+local ESPCorner = Instance.new("UICorner")
+ESPCorner.CornerRadius = UDim.new(0, 5)
+ESPCorner.Parent = ESPButton
+
+local ESPBorder = Instance.new("UIStroke")
+ESPBorder.Color = Color3.fromRGB(0, 255, 255)
+ESPBorder.Thickness = 1
+ESPBorder.Parent = ESPButton
+
+ESPButton.MouseButton1Click:Connect(function()
+    toggles.ESP = not toggles.ESP
+    ESPButton.Text = "ESP: " .. (toggles.ESP and "ON" or "OFF")
+    if toggles.ESP then
+        spawn(function()
+            while toggles.ESP and LocalPlayer.Character do
+                for _, obj in pairs(Workspace:GetChildren()) do
+                    if obj:FindFirstChild("Humanoid") and not obj:FindFirstChild("BillboardGui") then
+                        local esp = Instance.new("BillboardGui", obj)
+                        esp.Size = UDim2.new(0, 100, 0, 50)
+                        esp.StudsOffset = Vector3.new(0, 3, 0)
+                        local text = Instance.new("TextLabel", esp)
+                        text.Size = UDim2.new(1, 0, 1, 0)
+                        text.Text = obj.Name
+                        text.BackgroundTransparency = 1
+                        text.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        table.insert(espInstances, esp)
+                    end
+                end
+                wait(5)
+            end
+        end)
+    else
+        clearESP()
+        print("ESP đã tắt!")
+    end
+end)
+
+-- Phần Auto Weapons
+-- Nút Auto Tushita
+local TushitaButton = Instance.new("TextButton")
+TushitaButton.Size = UDim2.new(0.9, 0, 0, 40)
+TushitaButton.Position = UDim2.new(0.05, 0, 0, 250)
+TushitaButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+TushitaButton.BackgroundTransparency = 0.3
+TushitaButton.Text = "Auto Tushita: OFF"
+TushitaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+TushitaButton.TextScaled = true
+TushitaButton.Font = Enum.Font.SourceSans
+TushitaButton.Parent = MainFrame
+
+local TushitaCorner = Instance.new("UICorner")
+TushitaCorner.CornerRadius = UDim.new(0, 5)
+TushitaCorner.Parent = TushitaButton
+
+local TushitaBorder = Instance.new("UIStroke")
+TushitaBorder.Color = Color3.fromRGB(0, 255, 255)
+TushitaBorder.Thickness = 1
+TushitaBorder.Parent = TushitaButton
+
+TushitaButton.MouseButton1Click:Connect(function()
+    toggles.AutoTushita = not toggles.AutoTushita
+    TushitaButton.Text = "Auto Tushita: " .. (toggles.AutoTushita and "ON" or "OFF")
+    if toggles.AutoTushita then
+        spawn(function()
+            while toggles.AutoTushita and LocalPlayer.Character do
+                teleportTo(CFrame.new(-12550, 332, -7870))
+                if next(Workspace.Enemies:GetChildren()) then
+                    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+                        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                            teleportTo(enemy.HumanoidRootPart.CFrame)
+                            wait(attackSpeed)
+                        end
+                    end
+                end
+                teleportTo(CFrame.new(5750, 610, -280))
+                wait(1)
+                teleportTo(CFrame.new(-10200, 996, -6870))
+                if next(Workspace.Enemies:GetChildren()) then
+                    for _, boss in pairs(Workspace.Enemies:GetChildren()) do
+                        if boss.Name == "rip_indra True Form" and boss:FindFirstChild("Humanoid") and boss.Humanoid.Health > 0 then
+                            teleportTo(boss.HumanoidRootPart.CFrame)
+                            wait(attackSpeed)
+                        end
+                    end
+                end
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("YamaQuest", "BuyTushita")
+                wait(5)
+            end
+        end)
+    end
+end)
+
+-- Nút Auto Yama
+local YamaButton = Instance.new("TextButton")
+YamaButton.Size = UDim2.new(0.9, 0, 0, 40)
+YamaButton.Position = UDim2.new(0.05, 0, 0, 300)
+YamaButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+YamaButton.BackgroundTransparency = 0.3
+YamaButton.Text = "Auto Yama: OFF"
+YamaButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+YamaButton.TextScaled = true
+YamaButton.Font = Enum.Font.SourceSans
+YamaButton.Parent = MainFrame
+
+local YamaCorner = Instance.new("UICorner")
+YamaCorner.CornerRadius = UDim.new(0, 5)
+YamaCorner.Parent = YamaButton
+
+local YamaBorder = Instance.new("UIStroke")
+YamaBorder.Color = Color3.fromRGB(0, 255, 255)
+YamaBorder.Thickness = 1
+YamaBorder.Parent = YamaButton
+
+YamaButton.MouseButton1Click:Connect(function()
+    toggles.AutoYama = not toggles.AutoYama
+    YamaButton.Text = "Auto Yama: " .. (toggles.AutoYama and "ON" or "OFF")
+    if toggles.AutoYama then
+        spawn(function()
+            while toggles.AutoYama and LocalPlayer.Character do
+                teleportTo(CFrame.new(-12550, 332, -7870))
+                local eliteCount = 0
+                while eliteCount < 30 and toggles.AutoYama do
                     if next(Workspace.Enemies:GetChildren()) then
-                        for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
-                            if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
-                                teleportTo(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0))
+                        for _, elite in pairs(Workspace.Enemies:GetChildren()) do
+                            if elite.Name == "Elite Pirate" and elite:FindFirstChild("Humanoid") and elite.Humanoid.Health > 0 then
+                                teleportTo(elite.HumanoidRootPart.CFrame)
                                 wait(attackSpeed)
+                                eliteCount = eliteCount + 1
                             end
                         end
-                    else
-                        Library:Notify("Không tìm thấy quái!", 3)
-                        wait(2)
                     end
                     wait(1)
                 end
-            end)
-        end
+                teleportTo(CFrame.new(5230, 602, -280))
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("EliteHunter", "PullYama")
+                wait(1)
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("YamaQuest", "BuyYama")
+                wait(5)
+            end
+        end)
     end
-})
+end)
 
--- Tab Teleport
-local TeleportTab = Window:AddTab("Teleport")
-local TeleportGroup = TeleportTab:AddLeftGroupbox("Teleport Features")
-TeleportGroup:AddDropdown("TeleportIsland", {
-    Text = "Teleport to Island",
-    Values = {"Starter Pirate Island", "Kingdom of Rose", "Floating Turtle"},
-    Default = 1,
-    Callback = function(selected)
-        local locations = {
-            ["Starter Pirate Island"] = CFrame.new(1050, 17, 1350),
-            ["Kingdom of Rose"] = CFrame.new(-2000, 17, -2000),
-            ["Floating Turtle"] = CFrame.new(-12550, 332, -7870)
-        }
-        teleportTo(locations[selected])
-        Library:Notify("Đã dịch chuyển đến " .. selected, 3)
-    end
-})
+-- Nút Auto Shark Anchor
+local SharkAnchorButton = Instance.new("TextButton")
+SharkAnchorButton.Size = UDim2.new(0.9, 0, 0, 40)
+SharkAnchorButton.Position = UDim2.new(0.05, 0, 0, 350)
+SharkAnchorButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+SharkAnchorButton.BackgroundTransparency = 0.3
+SharkAnchorButton.Text = "Auto Shark Anchor: OFF"
+SharkAnchorButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+SharkAnchorButton.TextScaled = true
+SharkAnchorButton.Font = Enum.Font.SourceSans
+SharkAnchorButton.Parent = MainFrame
 
--- Tab ESP
-local ESPTab = Window:AddTab("ESP")
-local ESPGroup = ESPTab:AddLeftGroupbox("ESP Features")
-ESPGroup:AddToggle("ESP", {
-    Text = "ESP",
-    Default = false,
-    Callback = function(state)
-        toggles.ESP = state
-        if state then
-            spawn(function()
-                while toggles.ESP and LocalPlayer.Character do
-                    for _, obj in pairs(Workspace:GetChildren()) do
-                        if obj:FindFirstChild("Humanoid") and not obj:FindFirstChild("BillboardGui") then
-                            local esp = Instance.new("BillboardGui", obj)
-                            esp.Size = UDim2.new(0, 100, 0, 50)
-                            esp.StudsOffset = Vector3.new(0, 3, 0)
-                            local text = Instance.new("TextLabel", esp)
-                            text.Size = UDim2.new(1, 0, 1, 0)
-                            text.Text = obj.Name
-                            text.BackgroundTransparency = 1
-                            text.TextColor3 = Color3.fromRGB(255, 0, 0)
-                            table.insert(espInstances, esp)
+local SharkAnchorCorner = Instance.new("UICorner")
+SharkAnchorCorner.CornerRadius = UDim.new(0, 5)
+SharkAnchorCorner.Parent = SharkAnchorButton
+
+local SharkAnchorBorder = Instance.new("UIStroke")
+SharkAnchorBorder.Color = Color3.fromRGB(0, 255, 255)
+SharkAnchorBorder.Thickness = 1
+SharkAnchorBorder.Parent = SharkAnchorButton
+
+SharkAnchorButton.MouseButton1Click:Connect(function()
+    toggles.AutoSharkAnchor = not toggles.AutoSharkAnchor
+    SharkAnchorButton.Text = "Auto Shark Anchor: " .. (toggles.AutoSharkAnchor and "ON" or "OFF")
+    if toggles.AutoSharkAnchor then
+        spawn(function()
+            while toggles.AutoSharkAnchor and LocalPlayer.Character do
+                teleportTo(CFrame.new(-16250, 100, 1000))
+                if next(Workspace.SeaBeasts:GetChildren()) then
+                    for _, seaBeast in pairs(Workspace.SeaBeasts:GetChildren()) do
+                        if seaBeast.Name == "Terror Shark" and seaBeast:FindFirstChild("Humanoid") and seaBeast.Humanoid.Health > 0 then
+                            teleportTo(seaBeast.HumanoidRootPart.CFrame)
+                            wait(attackSpeed)
                         end
                     end
-                    wait(5)
                 end
-            end)
-        else
-            clearESP()
-            Library:Notify("ESP đã tắt!", 3)
-        end
+                teleportTo(CFrame.new(-16550, 55, 2300))
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyItem", "Shark Anchor")
+                wait(5)
+            end
+        end)
     end
-})
+end)
 
--- Thông báo khởi động
-Library:Notify("MoonCat Hub (Linoria UI) đã chạy!", 5)
+-- Nút Auto Guitar
+local GuitarButton = Instance.new("TextButton")
+GuitarButton.Size = UDim2.new(0.9, 0, 0, 40)
+GuitarButton.Position = UDim2.new(0.05, 0, 0, 400)
+GuitarButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+GuitarButton.BackgroundTransparency = 0.3
+GuitarButton.Text = "Auto Guitar: OFF"
+GuitarButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+GuitarButton.TextScaled = true
+GuitarButton.Font = Enum.Font.SourceSans
+GuitarButton.Parent = MainFrame
+
+local GuitarCorner = Instance.new("UICorner")
+GuitarCorner.CornerRadius = UDim.new(0, 5)
+GuitarCorner.Parent = GuitarButton
+
+local GuitarBorder = Instance.new("UIStroke")
+GuitarBorder.Color = Color3.fromRGB(0, 255, 255)
+GuitarBorder.Thickness = 1
+GuitarBorder.Parent = GuitarButton
+
+GuitarButton.MouseButton1Click:Connect(function()
+    toggles.AutoGuitar = not toggles.AutoGuitar
+    GuitarButton.Text = "Auto Guitar: " .. (toggles.AutoGuitar and "ON" or "OFF")
+    if toggles.AutoGuitar then
+        spawn(function()
+            while toggles.AutoGuitar and LocalPlayer.Character do
+                -- Kiểm tra Full Moon và Sea 3
+                if game.PlaceId == 7449423635 and isFullMoon() then -- Sea 3
+                    -- Tìm Mirage Island
+                    for _, island in pairs(Workspace:GetChildren()) do
+                        if island.Name == "Mirage Island" then
+                            -- Dịch chuyển đến Highest Point
+                            if island:FindFirstChild("HighestPoint") then
+                                teleportTo(island.HighestPoint.CFrame)
+                                -- Tương tác với Highest Point (nếu có ClickDetector)
+                                for _, part in pairs(island:GetChildren()) do
+                                    if part.Name == "HighestPoint" and part:FindFirstChild("ClickDetector") then
+                                        fireclickdetector(part.ClickDetector)
+                                    end
+                                end
+                            end
+                            -- Tìm và nhặt Blue Gear
+                            for _, gear in pairs(island:GetChildren()) do
+                                if gear.Name == "Blue Gear" then
+                                    teleportTo(gear.CFrame)
+                                    if gear:FindFirstChild("ClickDetector") then
+                                        fireclickdetector(gear.ClickDetector)
+                                    end
+                                    break
+                                end
+                            end
+                            -- Dịch chuyển đến Temple of Time
+                            teleportTo(CFrame.new(-5075, 315, -3150))
+                            -- Kéo Lever
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("Awakener", "PullLever")
+                            -- Gọi API để lấy Guitar
+                            ReplicatedStorage.Remotes.CommF_:InvokeServer("BuyItem", "Electric Guitar")
+                            wait(5)
+                            break
+                        end
+                    end
+                    print("Không tìm thấy Mirage Island, đang tìm lại...")
+                else
+                    print("Cần Full Moon và ở Sea 3 để lấy Guitar!")
+                end
+                wait(10)
+            end
+        end)
+    end
+end)
+
+-- Nút đóng giao diện
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0.9, 0, 0, 40)
+CloseButton.Position = UDim2.new(0.05, 0, 0, 500)
+CloseButton.BackgroundColor3 = Color3.fromRGB(150, 0, 0)
+CloseButton.BackgroundTransparency = 0.3
+CloseButton.Text = "Close"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextScaled = true
+CloseButton.Font = Enum.Font.SourceSans
+CloseButton.Parent = MainFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 5)
+CloseCorner.Parent = CloseButton
+
+local CloseBorder = Instance.new("UIStroke")
+CloseBorder.Color = Color3.fromRGB(255, 0, 0)
+CloseBorder.Thickness = 1
+CloseBorder.Parent = CloseButton
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+print("MoonCat Hub  đã chạy!")
