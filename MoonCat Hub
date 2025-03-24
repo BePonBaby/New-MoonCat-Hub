@@ -7,7 +7,7 @@ local Lighting = game:GetService("Lighting")
 
 -- Tạo ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "MoonCatHub"
+ScreenGui.Name = " MoonCatHub "
 ScreenGui.Parent = LocalPlayer.PlayerGui
 ScreenGui.ResetOnSpawn = false
 
@@ -517,4 +517,4 @@ CloseButton.MouseButton1Click:Connect(function()
     ScreenGui:Destroy()
 end)
 
-print("MoonCat Hub  đã chạy!")
+print("MoonCat Hub đã chạy!")
