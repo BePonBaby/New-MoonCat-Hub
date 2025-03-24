@@ -1,0 +1,385 @@
+-- Kiểm tra tải Orion UI
+local success, OrionLib = pcall(function()
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
+end)
+
+-- Biến để kiểm tra xem Orion UI có hoạt động không
+local orionLoaded = success
+
+-- Nếu Orion UI không tải được, thông báo và chuyển sang chế độ không UI
+if not orionLoaded then
+    warn("Không thể tải Orion UI: " .. OrionLib)
+    print("Chuyển sang chế độ không UI. Nhập lệnh vào chat để sử dụng:")
+    print("- 'farm on' để bật Auto Farm")
+    print("- 'farm off' để tắt Auto Farm")
+    print("- 'teleport <đảo>' để dịch chuyển (VD: teleport Starter Pirate Island)")
+    print("- 'esp on' để bật ESP")
+    print("- 'esp off' để tắt ESP")
+end
+
+-- Khởi tạo các dịch vụ
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+
+-- Biến trạng thái
+local toggles = {
+    AutoFarmLevel = false,
+    Teleport = false,
+    ESP = false,
+    DarkMode = true,
+}
+local attackSpeed = 0.5
+local espInstances = {}
+
+-- Hàm dịch chuyển
+local function teleportTo(pos)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = pos
+    end
+end
+
+-- Hàm dọn dẹp ESP
+local function clearESP()
+    for _, esp in pairs(espInstances) do
+        if esp then
+            esp:Destroy()
+        end
+    end
+    espInstances = {}
+end
+
+-- Hàm Auto Farm
+local function autoFarm(state)
+    toggles.AutoFarmLevel = state
+    if state then
+        spawn(function()
+            while toggles.AutoFarmLevel and LocalPlayer.Character do
+                if next(Workspace.Enemies:GetChildren()) then
+                    for _, enemy in pairs(Workspace.Enemies:GetChildren()) do
+                        if enemy:FindFirstChild("Humanoid") and enemy.Humanoid.Health > 0 then
+                            teleportTo(enemy.HumanoidRootPart.CFrame * CFrame.new(0, 5, 0))
+                            wait(attackSpeed)
+                        end
+                    end
+                else
+                    if orionLoaded then
+                        OrionLib:MakeNotification({
+                            Name = "MoonCat Hub",
+                            Content = "Không tìm thấy quái!",
+                            Time = 3
+                        })
+                    else
+                        print("Không tìm thấy quái!")
+                    end
+                    wait(2)
+                end
+                wait(1)
+            end
+        end)
+    end
+end
+
+-- Hàm Teleport
+local function teleportToIsland(island)
+    local locations = {
+        -- First Sea
+        ["Starter Pirate Island"] = CFrame.new(1050, 17, 1350),
+        ["Starter Marine Island"] = CFrame.new(-500, 17, 1500),
+        ["Jungle"] = CFrame.new(1500, 17, -1500),
+        ["Pirate Village"] = CFrame.new(100, 17, -5000),
+        ["Desert"] = CFrame.new(1000, 17, 4500),
+        ["Middle Island"] = CFrame.new(0, 17, 0),
+        ["Frozen Village"] = CFrame.new(1200, 17, -1100),
+        ["Marine Fortress"] = CFrame.new(-5000, 17, 5000),
+        ["Skylands"] = CFrame.new(150, 500, 150),
+        ["Prison"] = CFrame.new(5000, 17, 1000),
+        ["Colosseum"] = CFrame.new(-1500, 17, 3000),
+        ["Magma Village"] = CFrame.new(-5000, 17, -2000),
+        ["Underwater City"] = CFrame.new(4000, -200, 4000),
+        ["Fountain City"] = CFrame.new(5000, 17, -5000),
+
+        -- Second Sea
+        ["Kingdom of Rose"] = CFrame.new(-2000, 17, -2000),
+        ["Usoap’s Island"] = CFrame.new(-3000, 17, 1000),
+        ["Graveyard Island"] = CFrame.new(500, 17, 3000),
+        ["Dark Arena"] = CFrame.new(5000, 17, 5000),
+        ["Snow Mountain"] = CFrame.new(1000, 500, -3000),
+        ["Hot and Cold"] = CFrame.new(-5000, 17, 3000),
+        ["Cursed Ship"] = CFrame.new(0, 500, 5000),
+        ["Ice Castle"] = CFrame.new(5000, 17, -3000),
+        ["Forgotten Island"] = CFrame.new(-3000, 17, -5000),
+
+        -- Third Sea
+        ["Port Town"] = CFrame.new(-300, 17, -1000),
+        ["Hydra Island"] = CFrame.new(5750, 610, -280),
+        ["Great Tree"] = CFrame.new(2000, 17, -5000),
+        ["Floating Turtle"] = CFrame.new(-12550, 332, -7870),
+        ["Castle on the Sea"] = CFrame.new(-5000, 17, 1000),
+        ["Haunted Castle"] = CFrame.new(-9500, 17, 5000),
+        ["Sea of Treats"] = CFrame.new(0, 17, -10000),
+        ["Tiki Outpost"] = CFrame.new(-16250, 100, 1000),
+
+        -- Special Locations
+        ["Heaven Dimension"] = CFrame.new(0, 1000, 0),
+        ["Hell Dimension"] = CFrame.new(0, -1000, 0),
+        ["Frozen Dimension"] = CFrame.new(5000, 17, 5000),
+        ["Treasure Island"] = CFrame.new(-10000, 17, -5000),
+        ["Mirage Island"] = CFrame.new(0, 100, 0)
+    }
+    if locations[island] then
+        teleportTo(locations[island])
+        if orionLoaded then
+            OrionLib:MakeNotification({
+                Name = "MoonCat Hub",
+                Content = "Đã dịch chuyển đến " .. island,
+                Time = 3
+            })
+        else
+            print("Đã dịch chuyển đến " .. island)
+        end
+    else
+        if orionLoaded then
+            OrionLib:MakeNotification({
+                Name = "MoonCat Hub",
+                Content = "Đảo không hợp lệ! Kiểm tra danh sách đảo trong Teleport tab.",
+                Time = 3
+            })
+        else
+            print("Đảo không hợp lệ! Các đảo: " .. table.concat({unpack(locations)}, ", "))
+        end
+    end
+end
+
+-- Hàm ESP
+local function toggleESP(state)
+    toggles.ESP = state
+    if state then
+        spawn(function()
+            while toggles.ESP and LocalPlayer.Character do
+                for _, obj in pairs(Workspace:GetChildren()) do
+                    if obj:FindFirstChild("Humanoid") and not obj:FindFirstChild("BillboardGui") then
+                        local esp = Instance.new("BillboardGui", obj)
+                        esp.Size = UDim2.new(0, 100, 0, 50)
+                        esp.StudsOffset = Vector3.new(0, 3, 0)
+                        local text = Instance.new("TextLabel", esp)
+                        text.Size = UDim2.new(1, 0, 1, 0)
+                        text.Text = obj.Name
+                        text.BackgroundTransparency = 1
+                        text.TextColor3 = Color3.fromRGB(255, 0, 0)
+                        table.insert(espInstances, esp)
+                    end
+                end
+                wait(5)
+            end
+        end)
+    else
+        clearESP()
+        if orionLoaded then
+            OrionLib:MakeNotification({
+                Name = "MoonCat Hub",
+                Content = "ESP đã tắt!",
+                Time = 3
+            })
+        else
+            print("ESP đã tắt!")
+        end
+    end
+end
+
+-- Nếu Orion UI tải thành công, tạo giao diện
+if orionLoaded then
+    local Window = OrionLib:MakeWindow({
+        Name = "🌙 MoonCat Hub - Blox Fruits",
+        HidePremium = false,
+        SaveConfig = true,
+        ConfigFolder = "MoonCatHub",
+        IntroText = "MoonCat Hub",
+        IntroIcon = "rbxassetid://6026568198", -- Icon mặt trăng
+        IntroEnabled = true
+    })
+
+    -- Tab Auto Farm
+    local FarmTab = Window:MakeTab({
+        Name = "Farm",
+        Icon = "rbxassetid://4483345998", -- Icon kiếm
+        PremiumOnly = false
+    })
+    FarmTab:AddToggle({
+        Name = "Auto Farm Level",
+        Default = false,
+        Callback = function(state)
+            autoFarm(state)
+            OrionLib:MakeNotification({
+                Name = "MoonCat Hub",
+                Content = "Auto Farm " .. (state and "bật" or "tắt") .. "!",
+                Time = 3
+            })
+        end
+    })
+
+    -- Tab Teleport
+    local TeleportTab = Window:MakeTab({
+        Name = "Teleport",
+        Icon = "rbxassetid://6022668885", -- Icon dịch chuyển
+        PremiumOnly = false
+    })
+    TeleportTab:AddDropdown({
+        Name = "Teleport to Island",
+        Default = "Starter Pirate Island",
+        Options = {
+            -- First Sea
+            "Starter Pirate Island", "Starter Marine Island", "Jungle", "Pirate Village", "Desert",
+            "Middle Island", "Frozen Village", "Marine Fortress", "Skylands", "Prison",
+            "Colosseum", "Magma Village", "Underwater City", "Fountain City",
+            -- Second Sea
+            "Kingdom of Rose", "Usoap’s Island", "Graveyard Island", "Dark Arena", "Snow Mountain",
+            "Hot and Cold", "Cursed Ship", "Ice Castle", "Forgotten Island",
+            -- Third Sea
+            "Port Town", "Hydra Island", "Great Tree", "Floating Turtle", "Castle on the Sea",
+            "Haunted Castle", "Sea of Treats", "Tiki Outpost",
+            -- Special Locations
+            "Heaven Dimension", "Hell Dimension", "Frozen Dimension", "Treasure Island", "Mirage Island"
+        },
+        Callback = function(selected)
+            teleportToIsland(selected)
+        end
+    })
+
+    -- Tab ESP
+    local ESPTab = Window:MakeTab({
+        Name = "ESP",
+        Icon = "rbxassetid://6023426921", -- Icon mắt
+        PremiumOnly = false
+    })
+    ESPTab:AddToggle({
+        Name = "ESP",
+        Default = false,
+        Callback = function(state)
+            toggleESP(state)
+            OrionLib:MakeNotification({
+                Name = "MoonCat Hub",
+                Content = "ESP " .. (state and "bật" or "tắt") .. "!",
+                Time = 3
+            })
+        end
+    })
+
+    -- Tab Settings
+    local SettingsTab = Window:MakeTab({
+        Name = "Settings",
+        Icon = "rbxassetid://6023426915", -- Icon cài đặt
+        PremiumOnly = false
+    })
+    SettingsTab:AddToggle({
+        Name = "Dark/Light Mode",
+        Default = true,
+        Callback = function(state)
+            toggles.DarkMode = state
+            OrionLib:MakeNotification({
+                Name = "MoonCat Hub",
+                Content = state and "🌙 Dark Mode" or "☀️ Light Mode",
+                Time = 3
+            })
+        end
+    })
+    SettingsTab:AddButton({
+        Name = "Remove Fog",
+        Callback = function()
+            Lighting.FogEnd = 100000
+            Lighting.FogStart = 100000
+            if Lighting:FindFirstChild("Atmosphere") then
+                Lighting.Atmosphere:Destroy()
+            end
+            OrionLib:MakeNotification({
+                Name = "MoonCat Hub",
+                Content = "Đã xóa sương mù!",
+                Time = 3
+            })
+        end
+    })
+
+    -- Thông báo khởi động
+    OrionLib:MakeNotification({
+        Name = "MoonCat Hub",
+        Content = "MoonCat Hub (Orion Edition) đã chạy!",
+        Time = 5
+    })
+
+    -- Tùy chỉnh giao diện trong suốt
+    local ui = game:GetService("CoreGui"):FindFirstChild("Orion")
+    if ui then
+        for _, v in pairs(ui:GetDescendants()) do
+            if v:IsA("Frame") then
+                v.BackgroundTransparency = 0.7 -- Độ trong suốt (0: không trong suốt, 1: hoàn toàn trong suốt)
+                v.BackgroundColor3 = Color3.fromRGB(30, 30, 30) -- Màu nền tối
+                v.BorderColor3 = Color3.fromRGB(255, 105, 180) -- Viền màu hồng phấn
+                v.BorderSizePixel = 1
+            elseif v:IsA("TextLabel") or v:IsA("TextButton") then
+                v.TextColor3 = Color3.fromRGB(255, 215, 0) -- Chữ màu vàng sáng
+                v.BackgroundTransparency = 0.8
+            elseif v:IsA("TextButton") and v.Name == "TabButton" then
+                v.BackgroundColor3 = Color3.fromRGB(75, 0, 130) -- Màu tab tím đậm
+                v.BackgroundTransparency = 0.6
+            end
+        end
+    end
+end
+
+-- Xử lý lệnh qua chat (dự phòng nếu UI không hiển thị)
+UserInputService.InputBegan:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.Semicolon then
+        local command = LocalPlayer.PlayerGui:WaitForChild("Chat"):WaitForChild("Frame"):WaitForChild("ChatBar").Text
+        local args = command:split(" ")
+        if args[1] == "farm" then
+            if args[2] == "on" then
+                autoFarm(true)
+                if orionLoaded then
+                    OrionLib:MakeNotification({
+                        Name = "MoonCat Hub",
+                        Content = "Auto Farm đã bật!",
+                        Time = 3
+                    })
+                else
+                    print("Auto Farm đã bật!")
+                end
+            elseif args[2] == "off" then
+                autoFarm(false)
+                if orionLoaded then
+                    OrionLib:MakeNotification({
+                        Name = "MoonCat Hub",
+                        Content = "Auto Farm đã tắt!",
+                        Time = 3
+                    })
+                else
+                    print("Auto Farm đã tắt!")
+                end
+            end
+        elseif args[1] == "teleport" then
+            local island = table.concat({unpack(args, 2)}, " ")
+            teleportToIsland(island)
+        elseif args[1] == "esp" then
+            if args[2] == "on" then
+                toggleESP(true)
+                if orionLoaded then
+                    OrionLib:MakeNotification({
+                        Name = "MoonCat Hub",
+                        Content = "ESP đã bật!",
+                        Time = 3
+                    })
+                else
+                    print("ESP đã bật!")
+                end
+            elseif args[2] == "off" then
+                toggleESP(false)
+            end
+        end
+    end
+end)
+
+-- Thông báo khởi động trong console nếu không có UI
+if not orionLoaded then
+    print("MoonCat Hub (No UI Version) đã chạy!")
+end
